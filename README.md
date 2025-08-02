@@ -5,4 +5,5 @@
 * Или же самому прописать в директории с ботом:
 - npm i FlayerCaptcha
 - npm i node-fetch@2
+И естественно, если не установлен mineflayer то npm install mineflayer
 # bare-api.shop
