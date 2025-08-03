@@ -3,11 +3,13 @@ const FlayerCaptcha = require('FlayerCaptcha');
 const fs = require('fs').promises;
 const fetch = require('node-fetch');
 const path = require('path');
+const sharp = require('sharp');
 const originalWarn = console.warn;
 
-const API_KEY = "ТВОЙ КЛЮЧ ДЛЯ Bare API";
-const BOT_NAME = "IWasTesting321"
+const API_KEY = "ТВОЙ_КЛЮЧ_BARE_API";
+const BOT_NAME = "YourBotName"
 const REG_CMD = "/reg qwert321"
+const LOGIN_CMD = "/login qwert321"
 
 let bot;
 let captcha;
@@ -31,6 +33,7 @@ const directions2 = {
     'east': 'west'
 };
 
+// Игнор спама о чанках
 console.warn = (...args) => {
     const message = args.join(" ");
     if (message.includes("chunk failed to load")) return;
@@ -51,17 +54,27 @@ async function join() {
         });
 
         captcha = new FlayerCaptcha(bot);
-        captcha.on('imageReady', async ({ data, image }) => {
+        captcha.on('imageReady', async ({
+            data,
+            image
+        }) => {
             try {
                 if (captchaSolved) return;
-
                 if (getViewDirection(bot.entity.yaw, bot.entity.pitch) !== data.viewDirection) {
                     return;
                 }
 
+                // Лучшее оптимальное разрешение изображения для солвера
+                const resizedBuffer = await image.toBuffer().then(buf => sharp(buf).resize(250, 150, {
+                    fit: 'fill'
+                }).toBuffer());
                 const filePath = path.join(__dirname, 'captchas', 'captcha.png');
-                await fs.mkdir(path.dirname(filePath), { recursive: true });
-                await image.toFile(filePath);
+
+                await fs.mkdir(path.dirname(filePath), {
+                    recursive: true
+                });
+                await fs.writeFile(filePath, resizedBuffer);
+
                 console.log('Капча сохранена в папку captchas.');
                 const solvedCaptcha = await sendAPI(filePath);
                 if (solvedCaptcha) {
@@ -69,6 +82,7 @@ async function join() {
                     captchaSolved = true;
                 } else {
                     console.warn('Не удалось решить капчу или ответ пуст');
+                    captchaSolved = false;
                 }
             } catch (err) {
                 console.error('Ошибка обработки капчи:', err.stack);
@@ -77,11 +91,18 @@ async function join() {
 
         bot.on('message', async (message) => {
             console.log(message.toAnsi());
-
             const text = message.toString();
 
-            if (text.includes('[✾] Зарегистрируйтесь ↝ /reg <Пароль>')) {
+            if (text.includes('[✾] Войдите в игру ↝ /login <Пароль>')) {
+                // АвтоЛогин
+                bot.chat(LOGIN_CMD);
+            } else if (text.includes('[✾] Зарегистрируйтесь ↝ /reg <Пароль>')) {
+                // АвтоРег
                 bot.chat(REG_CMD);
+            } else if (text.includes('капчу неправильно')) {
+                // Ре-Солв
+                console.warn("Бот решил неправильно, решаю ещё...")
+                captchaSolved = false;
             }
 
             if (text.includes('[✾] Успешная регистрация! Приятной игры!')) {
@@ -91,7 +112,7 @@ async function join() {
                 await bot.equip(item, 'hand');
                 await bot.waitForTicks(20);
                 bot.chat(`/an105`);
-				// Здесь короче сам решай что дальше ему делать
+                // Здесь короче сам решай что дальше ему делать
             }
         });
 
