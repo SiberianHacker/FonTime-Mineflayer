@@ -3,7 +3,7 @@
 # Установка
 * Открыть install_depends.bat
 * Или же самому прописать в директории с ботом:
-- npm i FlayerCaptcha
+- npm i flayercaptcha
 - npm i node-fetch@2
 - npm i Sharp
 # Примечание
